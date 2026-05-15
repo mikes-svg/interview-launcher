@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --page-bg: 0 0% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --primary: 350 100% 61%;
+    --primary-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --danger: 0 84% 60%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+    --border: 0 0% 90%;
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-page-bg text-card-foreground;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+@layer utilities {
+  .animate-pulse-dot {
+    animation: pulse-dot 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .animate-waveform {
+    animation: waveform 0.9s ease-in-out infinite;
+    transform-origin: center;
+    height: var(--bar-height, 30%);
+  }
+  @keyframes waveform {
+    0%, 100% { transform: scaleY(0.35); }
+    50%      { transform: scaleY(1); }
+  }
+
+  .animate-waveform-user {
+    animation: waveform-user 0.7s ease-in-out infinite;
+    transform-origin: center;
+    height: var(--bar-height, 30%);
+  }
+  @keyframes waveform-user {
+    0%, 100% { transform: scaleY(0.25); }
+    50%      { transform: scaleY(0.95); }
+  }
+}

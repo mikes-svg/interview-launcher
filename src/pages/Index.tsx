@@ -28,15 +28,13 @@ export default function Index() {
       <div className="bg-card rounded-2xl shadow-lg w-full max-w-md p-6 sm:p-8">
         <header className="mb-6 text-center">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-            {COMPANY_NAME}
+            Hi {name || 'there'}!
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Hi {name || 'there'} — you're applying for{' '}
-            <span className="font-medium text-card-foreground">
-              {position.label}
-            </span>
-            .
-          </p>
+          {COMPANY_NAME !== 'Screening Interview' && (
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mt-2">
+              {COMPANY_NAME}
+            </p>
+          )}
         </header>
 
         {step === 'device-check' ? (
@@ -164,9 +162,9 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-1">🔧 Quick hardware check</h2>
       <p className="text-sm text-muted-foreground mb-4">
-        We need access to your microphone and camera before the interview.
+        Before we begin your interview, let's make sure your microphone and
+        camera are working.
       </p>
 
       {/* Camera preview */}
@@ -180,7 +178,10 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
             className="w-full h-full object-cover scale-x-[-1]"
           />
         ) : (
-          <span className="text-5xl">📷</span>
+          <div className="text-center text-muted-foreground">
+            <div className="text-5xl mb-1">📷</div>
+            <div className="text-sm">Camera preview will appear here</div>
+          </div>
         )}
       </div>
 
@@ -212,7 +213,7 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
             onClick={runCheck}
             className="w-full rounded-xl bg-primary text-primary-foreground font-medium py-3 hover:opacity-90 transition"
           >
-            Test mic and camera
+            🔍 Test Microphone &amp; Camera
           </button>
         )}
         {eitherFail && (
@@ -223,17 +224,25 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
             🔄 Retry test
           </button>
         )}
-        <button
-          onClick={() => {
-            cleanup();
-            onContinue();
-          }}
-          disabled={!bothPass}
-          className="w-full rounded-xl bg-primary text-primary-foreground font-medium py-3 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Continue to interview
-        </button>
+        {bothPass && (
+          <button
+            onClick={() => {
+              cleanup();
+              onContinue();
+            }}
+            className="w-full rounded-xl bg-primary text-primary-foreground font-medium py-3 hover:opacity-90 transition"
+          >
+            Continue to interview
+          </button>
+        )}
       </div>
+
+      {micStatus === 'idle' && (
+        <p className="text-xs text-muted-foreground mt-4 text-center">
+          💡 If prompted, click <span className="font-medium">Allow</span> to
+          grant access to your microphone and camera.
+        </p>
+      )}
     </section>
   );
 }

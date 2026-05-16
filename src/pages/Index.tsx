@@ -17,6 +17,7 @@ export default function Index() {
   const email = searchParams.get('email') ?? '';
   const upworkUrl = searchParams.get('upworkUrl') ?? '';
   const whatsapp = searchParams.get('whatsapp') ?? '';
+  const blockedDays = searchParams.get('blockedDays') ?? '';
   const positionSlug = searchParams.get('position');
   const position = resolvePosition(positionSlug);
 
@@ -36,6 +37,7 @@ export default function Index() {
             candidateEmail={email}
             upworkUrl={upworkUrl}
             whatsapp={whatsapp}
+            blockedDays={blockedDays}
             positionLabel={position.label}
             assistantId={position.assistantId}
           />
@@ -281,6 +283,7 @@ function Interview({
   candidateEmail,
   upworkUrl,
   whatsapp,
+  blockedDays,
   positionLabel,
   assistantId,
 }: {
@@ -288,6 +291,7 @@ function Interview({
   candidateEmail: string;
   upworkUrl: string;
   whatsapp: string;
+  blockedDays: string;
   positionLabel: string;
   assistantId: string;
 }) {
@@ -348,12 +352,14 @@ function Interview({
       await vapi.start(assistantId, {
         variableValues: {
           candidateName: candidateName || 'there',
+          blockedDays: blockedDays || 'none specified',
         },
         metadata: {
           candidateName,
           candidateEmail,
           upworkUrl,
           whatsapp,
+          blockedDays,
         },
         artifactPlan: {
           videoRecordingEnabled: true,

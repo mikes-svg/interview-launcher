@@ -42,7 +42,7 @@ const extraPositions = parsePositions();
 export const POSITIONS: Position[] = [
   {
     slug: 'default',
-    label: 'Screening Interview',
+    label: 'Leasing and Tenant Relations Manager',
     assistantId: DEFAULT_ASSISTANT_ID,
   },
   ...extraPositions,

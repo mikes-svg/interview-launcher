@@ -349,9 +349,14 @@ function Interview({
       vapiRef.current = vapi;
       attachHandlers(vapi);
 
+      // Vapi's {{candidateName}} should resolve to the first name only.
+      // We still pass the full name in metadata for the webhook / sheet logging.
+      const firstName =
+        (candidateName.split(/\s+/)[0] || candidateName || 'there').trim();
+
       await vapi.start(assistantId, {
         variableValues: {
-          candidateName: candidateName || 'there',
+          candidateName: firstName,
           blockedDays: blockedDays || 'none specified',
         },
         metadata: {

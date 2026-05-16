@@ -4,7 +4,6 @@ import Vapi from '@vapi-ai/web';
 import {
   VAPI_PUBLIC_KEY,
   INTERVIEWER_NAME,
-  COMPANY_NAME,
   resolvePosition,
 } from '../config';
 
@@ -25,26 +24,19 @@ export default function Index() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
-      <div className="bg-card rounded-2xl shadow-lg w-full max-w-md p-6 sm:p-8">
-        <header className="mb-6 text-center">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-            Hi {name || 'there'}!
-          </h1>
-          {COMPANY_NAME !== 'Screening Interview' && (
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mt-2">
-              {COMPANY_NAME}
-            </p>
-          )}
-        </header>
-
+      <div className="bg-card rounded-2xl shadow-lg w-full max-w-md p-8 sm:p-10">
         {step === 'device-check' ? (
-          <DeviceCheck onContinue={() => setStep('interview')} />
+          <DeviceCheck
+            name={name}
+            onContinue={() => setStep('interview')}
+          />
         ) : (
           <Interview
             candidateName={name}
             candidateEmail={email}
             upworkUrl={upworkUrl}
             whatsapp={whatsapp}
+            positionLabel={position.label}
             assistantId={position.assistantId}
           />
         )}
@@ -55,7 +47,13 @@ export default function Index() {
 
 // ---------------------------------------------------------- Step 1: Devices
 
-function DeviceCheck({ onContinue }: { onContinue: () => void }) {
+function DeviceCheck({
+  name,
+  onContinue,
+}: {
+  name: string;
+  onContinue: () => void;
+}) {
   const [micStatus, setMicStatus] = useState<CheckStatus>('idle');
   const [camStatus, setCamStatus] = useState<CheckStatus>('idle');
   const [micError, setMicError] = useState<string>('');
@@ -101,7 +99,6 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
         e?.name === 'NotAllowedError'
           ? 'Permission denied. Please allow access and retry.'
           : 'Not found or unavailable.';
-      // Fall back to audio-only so we can still pass the mic check.
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicStatus('success');
@@ -123,9 +120,10 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
 
     streamRef.current = stream;
 
-    // Mic level meter
     try {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const ctx = new Ctx();
       audioCtxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
@@ -137,32 +135,34 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
         analyser.getByteFrequencyData(data);
         let sum = 0;
         for (let i = 0; i < data.length; i++) sum += data[i];
-        const avg = sum / data.length; // 0..255
+        const avg = sum / data.length;
         setMicLevel(Math.min(100, Math.round((avg / 128) * 100)));
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
     } catch {
-      // mic level is a nicety, not a blocker
+      // mic-level meter is a nicety, not a blocker
     }
   }
 
-  // Attach the stream to the video element once camera passes.
   useEffect(() => {
     if (camStatus === 'success' && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
     }
   }, [camStatus]);
 
-  // Cleanup on unmount.
   useEffect(() => cleanup, []);
 
   const bothPass = micStatus === 'success' && camStatus === 'success';
   const eitherFail = micStatus === 'error' || camStatus === 'error';
 
   return (
-    <section>
-      <p className="text-sm text-muted-foreground mb-4">
+    <section className="text-center">
+      <div className="text-5xl mb-3">🔧</div>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+        Hi {name || 'there'}!
+      </h1>
+      <p className="text-sm text-muted-foreground mb-6">
         Before we begin your interview, let's make sure your microphone and
         camera are working.
       </p>
@@ -178,15 +178,14 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
             className="w-full h-full object-cover scale-x-[-1]"
           />
         ) : (
-          <div className="text-center text-muted-foreground">
+          <div className="text-muted-foreground">
             <div className="text-5xl mb-1">📷</div>
             <div className="text-sm">Camera preview will appear here</div>
           </div>
         )}
       </div>
 
-      {/* Status rows */}
-      <div className="space-y-2 mb-4">
+      <div className="space-y-2 mb-4 text-left">
         <StatusRow
           icon="🎤"
           label="Microphone"
@@ -206,12 +205,11 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
         <StatusRow icon="📷" label="Camera" status={camStatus} error={camError} />
       </div>
 
-      {/* Action buttons */}
       <div className="space-y-2">
         {micStatus === 'idle' && (
           <button
             onClick={runCheck}
-            className="w-full rounded-xl bg-primary text-primary-foreground font-medium py-3 hover:opacity-90 transition"
+            className="w-full rounded-xl bg-primary text-primary-foreground font-semibold py-4 hover:opacity-90 transition shadow-sm"
           >
             🔍 Test Microphone &amp; Camera
           </button>
@@ -230,15 +228,15 @@ function DeviceCheck({ onContinue }: { onContinue: () => void }) {
               cleanup();
               onContinue();
             }}
-            className="w-full rounded-xl bg-primary text-primary-foreground font-medium py-3 hover:opacity-90 transition"
+            className="w-full rounded-xl bg-primary text-primary-foreground font-semibold py-4 hover:opacity-90 transition shadow-sm"
           >
-            Continue to interview
+            Continue to interview →
           </button>
         )}
       </div>
 
       {micStatus === 'idle' && (
-        <p className="text-xs text-muted-foreground mt-4 text-center">
+        <p className="text-xs text-muted-foreground mt-4">
           💡 If prompted, click <span className="font-medium">Allow</span> to
           grant access to your microphone and camera.
         </p>
@@ -283,16 +281,18 @@ function Interview({
   candidateEmail,
   upworkUrl,
   whatsapp,
+  positionLabel,
   assistantId,
 }: {
   candidateName: string;
   candidateEmail: string;
   upworkUrl: string;
   whatsapp: string;
+  positionLabel: string;
   assistantId: string;
 }) {
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
-  const [statusText, setStatusText] = useState('Ready when you are.');
+  const [statusText, setStatusText] = useState('Ready to begin');
   const [speaker, setSpeaker] = useState<'ai' | 'user' | null>(null);
   const [errorText, setErrorText] = useState('');
   const vapiRef = useRef<Vapi | null>(null);
@@ -319,7 +319,7 @@ function Interview({
     vapi.on('error', (err: unknown) => {
       console.error('Vapi error:', err);
       setCallStatus('error');
-      setStatusText("Something went wrong. Please refresh and try again.");
+      setStatusText('Something went wrong. Please refresh and try again.');
       setSpeaker(null);
     });
   }
@@ -358,7 +358,6 @@ function Interview({
         artifactPlan: {
           videoRecordingEnabled: true,
         },
-      // The SDK's type for the second arg is narrower than what Vapi actually accepts.
       } as Parameters<Vapi['start']>[1]);
     } catch (err) {
       console.error('Failed to start Vapi call:', err);
@@ -384,63 +383,82 @@ function Interview({
       ? 'bg-success'
       : callStatus === 'error'
       ? 'bg-danger'
-      : callStatus === 'ended'
-      ? 'bg-muted-foreground'
       : 'bg-muted-foreground';
 
+  const isLive = callStatus === 'active';
+  const isEnded = callStatus === 'ended';
+
   return (
-    <section>
-      <h2 className="text-lg font-semibold mb-1">🏠 Your interview</h2>
-      <p className="text-sm text-muted-foreground mb-4">
-        When you click start, {INTERVIEWER_NAME} will greet you and ask a few
-        questions. Speak naturally — the call usually takes 12–15 minutes.
+    <section className="text-center">
+      <div className="text-5xl mb-3">{isEnded ? '✅' : '🏠'}</div>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+        {isEnded ? `Thanks${candidateName ? `, ${candidateName}` : ''}!` : `Hi ${candidateName || 'there'}!`}
+      </h1>
+      <p className="text-sm text-muted-foreground mb-6">
+        {isEnded ? (
+          <>Your interview has been recorded. We'll be in touch within 3 business days.</>
+        ) : isLive ? (
+          <>You're connected to <span className="font-semibold text-card-foreground">{INTERVIEWER_NAME}</span>. Speak naturally — the call usually takes 12–15 minutes.</>
+        ) : (
+          <>Your AI screening interview for the{' '}
+            <span className="font-semibold text-card-foreground">
+              {positionLabel} position
+            </span>{' '}
+            is ready. Click below and the interview will begin.</>
+        )}
       </p>
 
-      <div className="rounded-xl border border-border bg-muted/40 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span
-            className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor} ${
-              callStatus === 'active' ? 'animate-pulse-dot' : ''
-            }`}
-          />
-          <span className="text-sm font-medium">{statusText}</span>
+      {/* Waveform shows only during active call */}
+      {isLive && (
+        <div className="rounded-xl border border-border bg-muted/40 p-4 mb-4">
+          <Waveform active={isLive} speaker={speaker} />
         </div>
-
-        <Waveform active={callStatus === 'active'} speaker={speaker} />
-      </div>
+      )}
 
       {errorText && (
         <p className="text-sm text-danger mb-3">{errorText}</p>
       )}
 
       <div className="space-y-2">
-        {callStatus !== 'active' && (
+        {!isLive && !isEnded && (
           <button
             onClick={start}
-            disabled={callStatus === 'loading' || callStatus === 'ended'}
-            className="w-full rounded-xl bg-primary text-primary-foreground font-medium py-3 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={callStatus === 'loading'}
+            className="w-full rounded-xl bg-primary text-primary-foreground font-semibold py-4 hover:opacity-90 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {callStatus === 'loading'
-              ? 'Starting…'
-              : callStatus === 'ended'
-              ? 'Interview complete'
-              : 'Start interview'}
+            {callStatus === 'loading' ? 'Starting…' : '🎙️ Start Interview'}
           </button>
         )}
-        {callStatus === 'active' && (
+        {isLive && (
           <button
             onClick={stop}
-            className="w-full rounded-xl border border-danger text-danger font-medium py-3 hover:bg-danger hover:text-primary-foreground transition"
+            className="w-full rounded-xl border border-danger text-danger font-semibold py-4 hover:bg-danger hover:text-primary-foreground transition"
           >
-            Stop interview
+            Stop Interview
           </button>
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground mt-4 text-center">
-        We have a limit of 10 simultaneous interviews. If it stays on
-        "Starting…" the system is at capacity — come back in 1 hour.
-      </p>
+      {/* Status indicator under the button (only before the call ends) */}
+      {!isEnded && (
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <span
+            className={`inline-block w-2 h-2 rounded-full ${dotColor} ${
+              isLive ? 'animate-pulse-dot' : ''
+            }`}
+          />
+          <span className="text-sm text-muted-foreground">{statusText}</span>
+        </div>
+      )}
+
+      {!isLive && !isEnded && (
+        <p className="text-xs text-muted-foreground mt-6 leading-relaxed">
+          <span className="text-amber-600">⚠️ Note:</span> We have a limit of 10
+          simultaneous interviews. If you click "Start Interview" and it stays
+          on "Starting…" without beginning, our system is at capacity — please
+          come back in 1 hour and try again.
+        </p>
+      )}
     </section>
   );
 }
@@ -458,8 +476,7 @@ function Waveform({
     : speaker === 'user'
     ? 'animate-waveform-user'
     : 'animate-waveform';
-  const color =
-    speaker === 'user' ? 'bg-success' : 'bg-primary';
+  const color = speaker === 'user' ? 'bg-success' : 'bg-primary';
 
   return (
     <div className="flex items-center justify-center gap-1.5 h-16">

@@ -7,26 +7,46 @@ import {
   resolvePosition,
 } from '../config';
 
-type Step = 'device-check' | 'interview';
+type Step = 'intake' | 'device-check' | 'interview';
 type CheckStatus = 'idle' | 'testing' | 'success' | 'error';
 type CallStatus = 'idle' | 'loading' | 'active' | 'ended' | 'error';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (s: string) => EMAIL_RE.test(s.trim());
+const isValidName = (s: string) => s.trim().length >= 2;
+
 export default function Index() {
   const [searchParams] = useSearchParams();
-  const name = searchParams.get('name') ?? '';
-  const email = searchParams.get('email') ?? '';
+  const urlName = searchParams.get('name') ?? '';
+  const urlEmail = searchParams.get('email') ?? '';
   const upworkUrl = searchParams.get('upworkUrl') ?? '';
   const whatsapp = searchParams.get('whatsapp') ?? '';
   const blockedDays = searchParams.get('blockedDays') ?? '';
   const positionSlug = searchParams.get('position');
   const position = resolvePosition(positionSlug);
 
-  const [step, setStep] = useState<Step>('device-check');
+  // "Effective" identity used downstream — defaulted from URL, overridden by intake.
+  const [name, setName] = useState(urlName);
+  const [email, setEmail] = useState(urlEmail);
+
+  // Skip intake only if the URL provided a valid name AND a valid email.
+  const needsIntake = !isValidName(urlName) || !isValidEmail(urlEmail);
+  const [step, setStep] = useState<Step>(needsIntake ? 'intake' : 'device-check');
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
       <div className="bg-card rounded-2xl shadow-lg w-full max-w-md p-8 sm:p-10">
-        {step === 'device-check' ? (
+        {step === 'intake' ? (
+          <Intake
+            initialName={urlName}
+            initialEmail={urlEmail}
+            onContinue={(n, e) => {
+              setName(n);
+              setEmail(e);
+              setStep('device-check');
+            }}
+          />
+        ) : step === 'device-check' ? (
           <DeviceCheck
             name={name}
             onContinue={() => setStep('interview')}
@@ -44,6 +64,104 @@ export default function Index() {
         )}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------- Step 0: Intake
+
+function Intake({
+  initialName,
+  initialEmail,
+  onContinue,
+}: {
+  initialName: string;
+  initialEmail: string;
+  onContinue: (name: string, email: string) => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
+  const [submitted, setSubmitted] = useState(false);
+
+  const nameValid = isValidName(name);
+  const emailValid = isValidEmail(email);
+  const showNameError = submitted && !nameValid;
+  const showEmailError = submitted && !emailValid;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitted(true);
+    if (nameValid && emailValid) {
+      onContinue(name.trim(), email.trim());
+    }
+  }
+
+  return (
+    <section className="text-center">
+      <div className="text-5xl mb-3">👋</div>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome!</h1>
+      <p className="text-sm text-muted-foreground mb-6">
+        Before we begin, please confirm your name and email so we can match
+        your interview to your application.
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-4 text-left" noValidate>
+        <div>
+          <label htmlFor="intake-name" className="block text-sm font-medium mb-1">
+            Full name
+          </label>
+          <input
+            id="intake-name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={`w-full rounded-xl border bg-card px-4 py-3 outline-none transition focus:ring-2 focus:ring-primary ${
+              showNameError ? 'border-danger' : 'border-border'
+            }`}
+            placeholder="Jane Smith"
+          />
+          {showNameError && (
+            <p className="text-sm text-danger mt-1">
+              Please enter your full name.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="intake-email" className="block text-sm font-medium mb-1">
+            Email address
+          </label>
+          <input
+            id="intake-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={`w-full rounded-xl border bg-card px-4 py-3 outline-none transition focus:ring-2 focus:ring-primary ${
+              showEmailError ? 'border-danger' : 'border-border'
+            }`}
+            placeholder="jane@example.com"
+          />
+          {showEmailError && (
+            <p className="text-sm text-danger mt-1">
+              Please enter a valid email address.
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          className="w-full rounded-xl bg-primary text-primary-foreground font-semibold py-4 hover:opacity-90 transition shadow-sm"
+        >
+          Continue →
+        </button>
+
+        <p className="text-xs text-muted-foreground text-center pt-2">
+          Use the same email you applied with, if you have one — it lets us
+          match your interview to your application automatically.
+        </p>
+      </form>
+    </section>
   );
 }
 

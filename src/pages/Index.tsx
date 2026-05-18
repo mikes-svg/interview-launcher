@@ -417,7 +417,15 @@ function Interview({
   const [statusText, setStatusText] = useState('Ready to begin');
   const [speaker, setSpeaker] = useState<'ai' | 'user' | null>(null);
   const [errorText, setErrorText] = useState('');
+  const [confirmingStop, setConfirmingStop] = useState(false);
   const vapiRef = useRef<Vapi | null>(null);
+
+  // Auto-cancel the End-interview confirmation after 3s if no second click.
+  useEffect(() => {
+    if (!confirmingStop) return;
+    const t = setTimeout(() => setConfirmingStop(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmingStop]);
 
   function attachHandlers(vapi: Vapi) {
     vapi.on('call-start', () => {
@@ -548,6 +556,24 @@ function Interview({
         <p className="text-sm text-danger mb-3">{errorText}</p>
       )}
 
+      {/* Pre-call info banner — sets expectations about length + completion */}
+      {!isLive && !isEnded && (
+        <div className="rounded-xl border border-border bg-muted/40 p-4 mb-4 text-left">
+          <p className="text-sm leading-relaxed">
+            <span className="font-semibold">ℹ️ This interview has up to 9 questions</span>{' '}
+            and takes about 12–15 minutes. Please stay until {INTERVIEWER_NAME} tells
+            you the interview is complete — don't end the call early.
+          </p>
+        </div>
+      )}
+
+      {/* During-call reminder — sits right above the End button */}
+      {isLive && (
+        <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+          💡 Up to 9 questions total — please don't end the call until {INTERVIEWER_NAME} wraps up.
+        </p>
+      )}
+
       <div className="space-y-2">
         {!isLive && !isEnded && (
           <button
@@ -559,12 +585,29 @@ function Interview({
           </button>
         )}
         {isLive && (
-          <button
-            onClick={stop}
-            className="w-full rounded-xl border border-danger text-danger font-semibold py-4 hover:bg-danger hover:text-primary-foreground transition"
-          >
-            Stop Interview
-          </button>
+          confirmingStop ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => { setConfirmingStop(false); stop(); }}
+                className="w-full rounded-xl bg-danger text-primary-foreground font-semibold py-3 hover:opacity-90 transition shadow-sm"
+              >
+                Click again to end interview
+              </button>
+              <button
+                onClick={() => setConfirmingStop(false)}
+                className="w-full text-sm text-muted-foreground hover:text-card-foreground py-1 transition"
+              >
+                Cancel — keep going
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingStop(true)}
+              className="w-full rounded-xl border border-border text-muted-foreground font-medium py-3 hover:bg-muted hover:text-card-foreground transition text-sm"
+            >
+              End interview early
+            </button>
+          )
         )}
       </div>
 
